@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0b0d10">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<title>IVI</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="locked">
+<div class="app">
+  <nav class="rail" aria-label="Principal">
+    <button class="rail-btn active" data-view="home"><span class="ico">⌂</span>Início</button>
+    <button class="rail-btn" data-view="media"><span class="ico">♫</span>Mídia</button>
+    <button class="rail-btn" data-view="vehicle"><span class="ico">⚙</span>Veículo</button>
+  </nav>
+  <main>
+    <header class="status">
+      <span id="clock" class="clock">--:--</span>
+      <span class="chips">
+        <span id="chip-bat" class="chip off">Bat</span>
+        <span id="chip-net" class="chip off">Rede</span>
+        <span id="chip-gps" class="chip off">GPS</span>
+        <span id="chip-lock" class="chip warn">Dirigindo</span>
+      </span>
+    </header>
+
+    <section id="view-home" class="view active"><div class="grid">
+      <article class="card now">
+        <h2>Tocando agora</h2>
+        <div class="np-title" id="np-title">Nada tocando</div>
+        <div class="np-artist" id="np-artist"></div>
+        <div class="bar"><i id="np-bar"></i></div>
+        <div class="row">
+          <button class="btn" data-cmd="media.prev" aria-label="Anterior">⏮</button>
+          <button class="btn primary" id="np-play" data-cmd="media.toggle" aria-label="Tocar/Pausar">▶</button>
+          <button class="btn" data-cmd="media.next" aria-label="Próxima">⏭</button>
+        </div>
+      </article>
+      <article class="card">
+        <h2>Navegação e telefone</h2>
+        <a class="btn wide" href="https://www.google.com/maps">Google Maps</a>
+        <a class="btn wide" href="https://waze.com/ul">Waze</a>
+        <a class="btn wide" href="tel:">Telefone</a>
+      </article>
+      <article class="card center">
+        <h2 id="date">—</h2>
+        <div class="bigclock" id="bigclock">--:--</div>
+      </article>
+      <article class="card">
+        <h2>Controles rápidos</h2>
+        <div class="ctl"><span>Volume</span>
+          <button class="btn sm" data-cmd="system.volume" data-args='{"delta":-10}'>−</button>
+          <b id="vol">--</b>
+          <button class="btn sm" data-cmd="system.volume" data-args='{"delta":10}'>+</button></div>
+        <div class="ctl"><span>Tela sempre ligada</span>
+          <button class="btn sm" id="wake" data-cmd="system.wake">—</button></div>
+      </article>
+    </div></section>
+
+    <section id="view-media" class="view"><div class="media-layout">
+      <div class="card cover">
+        <div class="art">♫</div>
+        <div class="np-title" id="m-title">Nada tocando</div>
+        <div class="np-artist" id="m-artist"></div>
+        <div class="time"><span id="m-pos">0:00</span><span id="m-dur">0:00</span></div>
+        <div class="bar"><i id="m-bar"></i></div>
+        <div class="row">
+          <button class="btn" data-cmd="media.prev">⏮</button>
+          <button class="btn primary" id="m-play" data-cmd="media.toggle">▶</button>
+          <button class="btn" data-cmd="media.next">⏭</button>
+        </div>
+      </div>
+      <div class="card list">
+        <h2>Biblioteca <small class="no-drive-note">Bloqueada em movimento</small></h2>
+        <label class="btn file no-drive" for="pick">+ Adicionar músicas</label>
+        <input id="pick" type="file" accept="audio/*" multiple hidden>
+        <ul id="tracklist" class="tracks no-drive"></ul>
+      </div>
+    </div></section>
+
+    <section id="view-vehicle" class="view"><div class="grid g3">
+      <article class="card center"><h2>Velocidade (GPS)</h2>
+        <div class="gauge"><span id="v-speed">--</span><small>km/h</small></div></article>
+      <article class="card center"><h2>Bateria do aparelho</h2>
+        <div class="gauge"><span id="v-bat">--</span><small id="v-charge">%</small></div>
+        <div class="bar"><i id="v-batbar"></i></div></article>
+      <article class="card"><h2>Status</h2>
+        <dl class="kv">
+          <dt>GPS</dt><dd id="s-gps">—</dd>
+          <dt>Rede</dt><dd id="s-net">—</dd>
+          <dt>Músicas</dt><dd id="s-count">0</dd>
+          <dt>Bloqueio</dt><dd id="s-mode">—</dd>
+        </dl>
+        <button class="btn wide" id="mode-btn" data-cmd="lock.mode">Modo: —</button>
+        <button class="btn wide no-drive" data-cmd="lib.clear">Limpar biblioteca</button>
+      </article>
+    </div></section>
+  </main>
+</div>
+<div id="toast" class="toast" hidden></div>
+<script src="util.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

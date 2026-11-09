@@ -1,0 +1,87 @@
+/* Automotive dark HMI. Design rules: >=64px targets (>48dp), high contrast (WCAG AAA on
+   text), no hover states, no motion except 1 Hz progress, no text selection/scroll bounce. */
+:root{
+  --bg:#0b0d10; --surface:#14181d; --surface2:#1c222a; --line:#2a323d;
+  --text:#f2f5f8; --muted:#a3adba; --accent:#4cc2ff; --ok:#3ddc84; --warn:#ffb020; --danger:#ff5a5f;
+  --target:4rem; --r:1.1rem;
+}
+*{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:var(--bg);color:var(--text);
+  font:400 1.25rem/1.3 system-ui,"Segoe UI",Roboto,sans-serif;
+  overflow:hidden;overscroll-behavior:none;user-select:none;-webkit-user-select:none;
+  touch-action:manipulation}
+.app{display:grid;grid-template-columns:7.5rem 1fr;height:100%}
+.rail{background:var(--surface);display:flex;flex-direction:column;gap:.5rem;padding:.75rem;border-right:1px solid var(--line)}
+.rail-btn{flex:1;min-height:var(--target);background:transparent;border:0;border-radius:var(--r);
+  color:var(--muted);font:600 1rem inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.25rem}
+.rail-btn .ico{font-size:2rem}
+.rail-btn.active{background:var(--surface2);color:var(--accent)}
+main{display:flex;flex-direction:column;min-width:0;height:100%}
+.status{display:flex;justify-content:space-between;align-items:center;height:3.5rem;padding:0 1.25rem;color:var(--muted)}
+.clock{font-weight:700;color:var(--text);font-size:1.4rem}
+.chips{display:flex;gap:.5rem}
+.chip{padding:.2rem .7rem;border-radius:2rem;font-size:.95rem;font-weight:700;background:var(--surface2);color:var(--ok)}
+.chip.off{color:var(--muted)} .chip.warn{color:var(--warn)}
+.view{display:none;flex:1;min-height:0;padding:0 1.25rem 1.25rem}
+.view.active{display:block}
+.grid{display:grid;grid-template-columns:1.4fr 1fr;grid-auto-rows:1fr;gap:1rem;height:100%}
+.grid.g3{grid-template-columns:1fr 1fr 1.2fr;grid-auto-rows:auto;align-items:start}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:1.25rem;
+  display:flex;flex-direction:column;gap:.75rem;min-height:0}
+.card h2{font-size:1rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.center{align-items:center;justify-content:center;text-align:center}
+.np-title{font-size:1.9rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.np-artist{color:var(--muted);font-size:1.3rem;min-height:1.6rem}
+.bar{height:.5rem;background:var(--surface2);border-radius:1rem;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--accent)}
+.row{display:flex;gap:1rem;justify-content:center;margin-top:auto}
+.btn{min-width:var(--target);min-height:var(--target);padding:0 1.5rem;border-radius:var(--r);
+  border:1px solid var(--line);background:var(--surface2);color:var(--text);font:600 1.5rem inherit}
+.btn:active{background:var(--accent);color:#001018}
+.btn.primary{background:var(--accent);color:#001018;min-width:6rem}
+.btn.sm{min-width:var(--target);padding:0}
+.btn.wide{width:100%} .btn.ok{background:var(--ok);color:#00200c} .btn.danger{background:var(--danger);color:#2a0003}
+.btn:disabled{opacity:.35}
+.hint{color:var(--muted);font-size:1rem}
+.bigclock{font-size:4.5rem;font-weight:800;letter-spacing:.02em}
+.ctl{display:flex;align-items:center;gap:1rem}
+.ctl span{flex:1;color:var(--muted)} .ctl b{min-width:3.5rem;text-align:center;font-size:1.5rem}
+.media-layout{display:grid;grid-template-columns:1fr 1fr;gap:1rem;height:100%}
+.cover .art{flex:1;display:grid;place-items:center;font-size:7rem;background:var(--surface2);border-radius:var(--r);color:var(--muted)}
+.time{display:flex;justify-content:space-between;color:var(--muted)}
+.list{overflow:hidden}
+.tracks{list-style:none;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:.5rem;-webkit-overflow-scrolling:touch}
+.track{width:100%;min-height:var(--target);text-align:left;padding:.5rem 1rem;border-radius:var(--r);
+  border:1px solid var(--line);background:var(--surface2);color:var(--text);font:500 1.15rem inherit;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;content-visibility:auto}
+.track.cur{border-color:var(--accent);color:var(--accent)}
+.gauge span{font-size:6rem;font-weight:800;line-height:1} .gauge small{display:block;color:var(--muted);font-size:1.2rem}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:.6rem 1.25rem} .kv dt{color:var(--muted)} .kv dd{font-weight:700;text-align:right}
+/* Driver-distraction lock: greyed here, enforced again on the server */
+.locked .no-drive{pointer-events:none;opacity:.3}
+.no-drive-note{display:none;color:var(--warn);text-transform:none;letter-spacing:0;margin-left:.5rem}
+.locked .no-drive-note{display:inline}
+.call{position:fixed;inset:0;background:rgba(0,0,0,.88);display:grid;place-items:center;z-index:10}
+.call[hidden],.toast[hidden]{display:none}
+.call-box{background:var(--surface);border:2px solid var(--ok);border-radius:1.5rem;padding:2rem 3rem;
+  display:flex;flex-direction:column;gap:1.25rem;min-width:28rem;text-align:center}
+.call-name{font-size:2.6rem;font-weight:800}
+.toast{position:fixed;left:50%;bottom:1.5rem;transform:translateX(-50%);background:var(--danger);color:#fff;
+  padding:.8rem 1.5rem;border-radius:2rem;font-weight:700;z-index:20}
+@media (max-width:900px){.grid,.grid.g3,.media-layout{grid-template-columns:1fr}.app{grid-template-columns:5.5rem 1fr}}
+
+/* ===== Android overrides ===== */
+html{font-size:clamp(12px,2.6vh,18px)}                 /* scales every rem: phones in landscape ... tablets */
+a.btn{display:flex;align-items:center;justify-content:center;text-decoration:none}
+.btn.file{display:flex;align-items:center;justify-content:center;text-align:center}
+.app{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
+.card{overflow:hidden}
+.view{overflow-y:auto}
+.btn.on{background:var(--accent);color:#001018}
+@media (max-height:480px){
+  .card{padding:.7rem;gap:.4rem}
+  .np-title{font-size:1.4rem} .np-artist{font-size:1.05rem}
+  .bigclock{font-size:2.8rem} .gauge span{font-size:3.6rem}
+  .cover .art{font-size:3rem} .rail-btn .ico{font-size:1.5rem}
+  .status{height:2.6rem}
+}
