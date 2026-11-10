@@ -1,4 +1,4 @@
-/* IVI for Android (PWA). Runs entirely on the device: Chrome APIs replace the Python back-end.
+/* IVI for Android (PWA). Runs on-device; online map services provide optional route planning.
      mpv/PipeWire -> <audio> + Media Session   GPS/CAN speed -> Geolocation
      StateHub     -> set()                     library       -> IndexedDB (persists offline)
    Phone calls and Bluetooth audio routing are handled natively by Android. */
@@ -87,8 +87,23 @@ if ("mediaSession" in navigator) {
 
 /* ---------------- vehicle speed from GPS + driver-distraction lock ---------------- */
 let lastFix = 0, gpsSpeed = null, prevPos = null, warnedGps = false;
+let map, currentMarker, routeLayer, currentPosition = null, routeController, followingLocation = true, routePending = false;
+let lastGeocodeAt = 0, routeRequestId = 0;
+
+function updateNavigationPosition(coords) {
+  currentPosition = { lat: coords.latitude, lon: coords.longitude };
+  if (!map || !window.L) return;
+  const point = [currentPosition.lat, currentPosition.lon];
+  if (currentMarker) currentMarker.setLatLng(point);
+  else currentMarker = L.circleMarker(point, {
+    radius: 9, color: "#ffffff", weight: 3, fillColor: "#1687ff", fillOpacity: 1,
+  }).bindTooltip("Sua localização").addTo(map);
+  if (followingLocation) map.setView(point, Math.max(map.getZoom(), 15), { animate: false });
+}
+
 function onPos(p) {
   const c = p.coords; lastFix = Date.now();
+  updateNavigationPosition(c);
   let v = c.speed;                                                      // m/s, may be null
   if (v == null && prevPos) {                                           // fallback: distance / time
     const dt = (p.timestamp - prevPos.t) / 1000;
@@ -100,6 +115,7 @@ function onPos(p) {
 }
 function onPosErr(e) {
   set("gps", { fix: false }); recompute();
+  if ($("#route-status")) $("#route-status").textContent = "Sem sinal GPS. Ative a localização do aparelho.";
   if (!warnedGps) { warnedGps = true; toast(e.code === 1 ? "Permita a localização para o bloqueio por velocidade" : "GPS indisponível"); }
 }
 function recompute() {
@@ -170,14 +186,165 @@ $("#pick").addEventListener("change", (e) => {
 document.addEventListener("click", () => {                        // first tap: fullscreen / wake lock / orientation
   if (!matchMedia("(display-mode: fullscreen), (display-mode: standalone)").matches)
     document.documentElement.requestFullscreen?.().catch(() => {});
-  screen.orientation?.lock?.("landscape").catch(() => {});
   setWake(store.get("wake", true));
 }, { once: true });
 
 function showView(n) {
+  document.body.classList.toggle("navigation-active", n === "navigation");
   document.querySelectorAll(".view").forEach((el) => el.classList.toggle("active", el.id === "view-" + n));
   document.querySelectorAll(".rail-btn").forEach((el) => el.classList.toggle("active", el.dataset.view === n));
+  if (n === "navigation") {
+    if (ensureMap()) setTimeout(() => map.invalidateSize(), 0);
+    if (!currentPosition) $("#route-status").textContent = "Aguardando sinal GPS para traçar a rota.";
+  }
 }
+
+function ensureMap() {
+  if (map) return true;
+  if (!window.L) {
+    $("#route-status").textContent = "Mapa indisponível. Verifique a conexão e reabra a navegação.";
+    return false;
+  }
+  map = L.map("map", { zoomControl: false, attributionControl: true, zoomSnap: .5 }).setView([-14.235, -51.925], 4);
+  L.control.zoom({ position: "topright" }).addTo(map);
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+    maxZoom: 20, subdomains: "abcd",
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+  }).on("tileerror", () => {
+    $("#route-status").textContent = "Não foi possível carregar o mapa. Verifique a conexão.";
+  }).addTo(map);
+  if (currentPosition) updateNavigationPosition({ latitude: currentPosition.lat, longitude: currentPosition.lon });
+  updateMapInteractions();
+  return true;
+}
+
+function updateMapInteractions() {
+  if (!map) return;
+  const enabled = !S.restrictions.locked;
+  [map.dragging, map.touchZoom, map.doubleClickZoom, map.scrollWheelZoom, map.boxZoom, map.keyboard]
+    .forEach((interaction) => interaction?.[enabled ? "enable" : "disable"]());
+}
+
+function formatDuration(seconds) {
+  const minutes = Math.round(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  return hours ? `${hours} h ${minutes % 60} min` : `${minutes} min`;
+}
+
+function clearRoute() {
+  if (routeLayer) routeLayer.remove();
+  routeLayer = null;
+  $("#route-summary").hidden = true;
+  $("#clear-route-btn").disabled = true;
+  $("#route-status").textContent = "Rota removida.";
+}
+
+async function traceRoute(destination) {
+  if (S.restrictions.locked) {
+    toast("Planejamento de rota indisponível em movimento");
+    return;
+  }
+  if (!navigator.onLine) {
+    $("#route-status").textContent = "Conecte-se à internet para buscar o destino e traçar a rota.";
+    return;
+  }
+  if (!currentPosition || !S.gps.fix || Date.now() - lastFix > IVI.GPS_STALE_MS) {
+    $("#route-status").textContent = "Aguardando uma posição GPS válida para traçar a rota.";
+    return;
+  }
+  if (!ensureMap()) return;
+
+  if (routeController) routeController.abort();
+  routeController = new AbortController();
+  const { signal } = routeController;
+  const requestId = ++routeRequestId;
+  const button = $("#route-btn");
+  routePending = true;
+  button.disabled = true;
+  clearRoute();
+  $("#route-status").textContent = "Buscando destino e calculando a rota…";
+  try {
+    const delay = Math.max(0, 1000 - (Date.now() - lastGeocodeAt));
+    if (delay) await new Promise((resolve) => setTimeout(resolve, delay));
+    lastGeocodeAt = Date.now();
+    const searchUrl = new URL("https://nominatim.openstreetmap.org/search");
+    searchUrl.search = new URLSearchParams({ q: destination, format: "jsonv2", limit: "1", "accept-language": "pt-BR" });
+    const searchResponse = await fetch(searchUrl, { signal, headers: { Accept: "application/json" } });
+    if (!searchResponse.ok) throw new Error("Falha ao buscar o destino.");
+    const places = await searchResponse.json();
+    if (!places.length) {
+      $("#route-status").textContent = "Destino não encontrado. Confira o endereço e tente novamente.";
+      return;
+    }
+
+    const place = places[0];
+    const lat = Number(place.lat), lon = Number(place.lon);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) throw new Error("A busca retornou uma localização inválida.");
+    const start = `${currentPosition.lon},${currentPosition.lat}`;
+    const end = `${lon},${lat}`;
+    const routeUrl = `https://router.project-osrm.org/route/v1/driving/${start};${end}?overview=full&geometries=geojson`;
+    const routeResponse = await fetch(routeUrl, { signal, headers: { Accept: "application/json" } });
+    if (!routeResponse.ok) throw new Error("Falha ao calcular a rota.");
+    const result = await routeResponse.json();
+    if (result.code !== "Ok" || !result.routes?.length) {
+      $("#route-status").textContent = "Não foi encontrada uma rota de carro para esse destino.";
+      return;
+    }
+
+    const route = result.routes[0];
+    const geometry = route.geometry;
+    if (geometry?.type !== "LineString" || !Array.isArray(geometry.coordinates) ||
+        geometry.coordinates.length < 2 ||
+        geometry.coordinates.some((point) => !Array.isArray(point) ||
+          !Number.isFinite(point[0]) || !Number.isFinite(point[1]))) {
+      throw new Error("O serviço não retornou um trajeto pelas vias. Tente novamente.");
+    }
+
+    clearRoute();
+    routeLayer = L.featureGroup([
+      L.geoJSON(geometry, { style: { color: "#07131c", weight: 13, opacity: .95 } }),
+      L.geoJSON(geometry, { style: { color: "#54d6ff", weight: 8, opacity: 1 } }),
+      L.circleMarker([lat, lon], { radius: 8, color: "#ffffff", weight: 2, fillColor: "#ff5a5f", fillOpacity: 1 }),
+    ]).addTo(map);
+    const mapBounds = $("#map").getBoundingClientRect();
+    const panelBounds = $(".navigation-panel").getBoundingClientRect();
+    map.fitBounds(routeLayer.getBounds(), {
+      paddingTopLeft: [Math.max(24, panelBounds.right - mapBounds.left + 16), Math.max(24, panelBounds.bottom - mapBounds.top + 16)],
+      paddingBottomRight: [88, 88],
+      maxZoom: 16,
+    });
+    followingLocation = true;
+    $("#route-distance").textContent = route.distance >= 1000
+      ? `${(route.distance / 1000).toFixed(1)} km` : `${Math.round(route.distance)} m`;
+    $("#route-duration").textContent = formatDuration(route.duration);
+    $("#route-summary").hidden = false;
+    $("#clear-route-btn").disabled = S.restrictions.locked;
+    $("#route-status").textContent = `Rota para ${place.name || destination}.`;
+  } catch (error) {
+    if (error.name === "AbortError" || requestId !== routeRequestId) return;
+    console.error(error);
+    $("#route-status").textContent = error.message || "Não foi possível traçar a rota. Tente novamente.";
+  } finally {
+    if (requestId === routeRequestId) {
+      routePending = false;
+      button.disabled = S.restrictions.locked;
+    }
+  }
+}
+
+$("#route-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  traceRoute($("#destination").value.trim());
+});
+$("#clear-route-btn").addEventListener("click", clearRoute);
+$("#locate-btn").addEventListener("click", () => {
+  followingLocation = true;
+  if (!currentPosition) {
+    $("#route-status").textContent = "Aguardando sinal GPS para encontrar sua localização.";
+    return;
+  }
+  if (ensureMap()) map.setView([currentPosition.lat, currentPosition.lon], 16, { animate: false });
+});
 let toastTimer;
 function toast(m) { const t = $("#toast"); t.textContent = m; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => (t.hidden = true), 2500); }
 const txt = (id, v) => { const el = document.getElementById(id); if (el.textContent !== String(v)) el.textContent = v; };
@@ -212,6 +379,10 @@ function rLock() {
   chip("chip-lock", L ? "Dirigindo" : "Parado", L ? "warn" : "ok");
   txt("s-mode", L ? "Ativo" : "Liberado");
   const mb = $("#mode-btn"); mb.textContent = "Modo: " + MODE_LABEL[S.settings.mode]; mb.classList.toggle("on", S.settings.mode !== "auto");
+  $("#destination").disabled = L;
+  $("#route-btn").disabled = L || routePending;
+  $("#clear-route-btn").disabled = L || !routeLayer;
+  updateMapInteractions();
 }
 function rSystem() {
   const s = S.system;

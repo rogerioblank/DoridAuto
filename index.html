@@ -8,11 +8,13 @@
 <link rel="icon" href="icon-192.png">
 <title>IVI</title>
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 </head>
 <body class="locked">
 <div class="app">
   <nav class="rail" aria-label="Principal">
     <button class="rail-btn active" data-view="home"><span class="ico">⌂</span>Início</button>
+    <button class="rail-btn" data-view="navigation"><span class="ico">➤</span>Navegação</button>
     <button class="rail-btn" data-view="media"><span class="ico">♫</span>Mídia</button>
     <button class="rail-btn" data-view="vehicle"><span class="ico">⚙</span>Veículo</button>
   </nav>
@@ -41,8 +43,7 @@
       </article>
       <article class="card">
         <h2>Navegação e telefone</h2>
-        <a class="btn wide" href="https://www.google.com/maps">Google Maps</a>
-        <a class="btn wide" href="https://waze.com/ul">Waze</a>
+        <button class="btn wide" data-view="navigation">Abrir navegação</button>
         <a class="btn wide" href="tel:">Telefone</a>
       </article>
       <article class="card center">
@@ -59,6 +60,34 @@
           <button class="btn sm" id="wake" data-cmd="system.wake">—</button></div>
       </article>
     </div></section>
+
+    <section id="view-navigation" class="view">
+      <div class="navigation-layout">
+        <article class="card navigation-panel">
+          <div class="navigation-heading">
+            <button class="btn navigation-back" type="button" data-view="home" aria-label="Voltar ao início">‹</button>
+            <h2>Navegação</h2>
+          </div>
+          <form id="route-form">
+            <label for="destination">Destino</label>
+            <input id="destination" class="no-drive" type="search" autocomplete="street-address"
+              placeholder="Endereço ou local" required>
+            <button id="route-btn" class="btn wide primary no-drive" type="submit">Traçar rota</button>
+          </form>
+          <button id="clear-route-btn" class="btn wide no-drive" type="button" disabled>Limpar rota</button>
+          <p id="route-status" class="hint" role="status" aria-live="polite">Aguardando sinal GPS para traçar a rota.</p>
+          <dl id="route-summary" class="route-summary" hidden>
+            <dt>Distância</dt><dd id="route-distance">—</dd>
+            <dt>Tempo estimado</dt><dd id="route-duration">—</dd>
+          </dl>
+          <small class="map-attribution">Mapa © OpenStreetMap</small>
+        </article>
+        <div class="card map-card">
+          <div id="map" role="application" aria-label="Mapa com sua localização e rota"></div>
+        </div>
+        <button id="locate-btn" class="btn map-recenter" type="button" aria-label="Centralizar na minha localização">⌖</button>
+      </div>
+    </section>
 
     <section id="view-media" class="view"><div class="media-layout">
       <div class="card cover">
@@ -101,6 +130,7 @@
   </main>
 </div>
 <div id="toast" class="toast" hidden></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="util.js"></script>
 <script src="app.js"></script>
 </body>
