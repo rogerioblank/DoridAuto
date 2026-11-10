@@ -66,6 +66,7 @@ main{display:flex;flex-direction:column;min-width:0;height:100%}
 .map-card{position:absolute;inset:0;padding:0;border:0;border-radius:0}
 #map{position:absolute;inset:0;overflow:hidden;background:#10151c}
 .leaflet-container{font:inherit}
+.leaflet-tile-pane .leaflet-tile{filter:invert(100%) hue-rotate(180deg) brightness(88%) contrast(90%)}
 .leaflet-control-attribution{font-size:.7rem;background:rgba(11,15,20,.8)!important;color:#bdc8d3!important}
 .leaflet-control-attribution a{color:#8fcbff!important}
 .leaflet-control-zoom a{width:3.5rem!important;height:3.5rem!important;line-height:3.5rem!important;

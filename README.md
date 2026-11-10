@@ -26,7 +26,7 @@ instalação funcionam) e instale pelo menu ⋮. Depois de instalado pode fechar
 - O mapa e o traçado de rotas pelas vias são exibidos no app. A busca de endereço usa OpenStreetMap/Nominatim;
   o cálculo de rotas usa OSRM. Se o serviço não retornar a geometria da rota, o app informa o erro e não desenha uma linha reta.
   É necessária uma conexão com a internet para carregar o mapa e traçar rotas.
-- A navegação usa um mapa escuro e se adapta à tela do celular Android em retrato ou paisagem. O mapa e as rotas são carregados pela internet.
+- A navegação usa os mapas do OpenStreetMap com tema escuro aplicado pelo app, adaptando-se à tela do celular Android em retrato ou paisagem. O mapa e as rotas são carregados pela internet.
 - O planejamento e a interação com o mapa ficam bloqueados quando o modo GPS detecta movimento; a posição continua sendo atualizada.
 - A rota mostra distância e duração estimada, mas não oferece instruções por voz nem mapas offline.
 

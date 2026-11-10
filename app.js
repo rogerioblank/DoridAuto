@@ -207,9 +207,9 @@ function ensureMap() {
   }
   map = L.map("map", { zoomControl: false, attributionControl: true, zoomSnap: .5 }).setView([-14.235, -51.925], 4);
   L.control.zoom({ position: "topright" }).addTo(map);
-  L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-    maxZoom: 20, subdomains: "abcd",
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19, maxNativeZoom: 19, detectRetina: false,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
   }).on("tileerror", () => {
     $("#route-status").textContent = "Não foi possível carregar o mapa. Verifique a conexão.";
   }).addTo(map);

@@ -1,6 +1,6 @@
 /* Service worker: app shell works offline (stale-while-revalidate).
    Bump CACHE when you change files so devices pick up the update. */
-const CACHE = "ivi-android-v5";
+const CACHE = "ivi-android-v7";
 const ASSETS = ["./", "index.html", "style.css", "util.js", "app.js", "manifest.webmanifest", "icon-192.png", "icon-512.png"];
 self.addEventListener("install", (e) => e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting())));
 self.addEventListener("activate", (e) => e.waitUntil(
